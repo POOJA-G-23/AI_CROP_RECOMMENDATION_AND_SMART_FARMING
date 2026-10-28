@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Crop Advisor — Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/css/auth.css">
+<script src="/static/js/auth.js"></script>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div></div>
+<div class="app" id="main-app" class="hist-nav-added">
+  <!-- TOP NAV -->
+  <div class="top-nav">
+    <a href="/history" class="nav-link"><i class="fa fa-clock-rotate-left"></i> My History</a>
+    <span id="userDisplay" class="user-name"></span>
+    <button class="btn-logout" onclick="Auth.logout()" title="Logout"><i class="fa fa-sign-out-alt"></i></button>
+  </div>
+  <!-- END TOP NAV -->
+
+
+  <header class="header">
+    <div class="header-icon" onclick="window.location.href='/app'" style="cursor:pointer">🌾</div>
+    <div class="header-text">
+      <h1 id="appTitle">AI Crop Advisor</h1>
+      <p class="tagline" id="tagline">Your personalised farming advisory</p>
+    </div>
+    <select id="language" class="lang-select" onchange="changeLang()">
+      <option value="en">🌐 English</option>
+      <option value="ta">தமிழ்</option>
+      <option value="te">తెలుగు</option>
+      <option value="kn">ಕನ್ನಡ</option>
+      <option value="ml">മലയാളം</option>
+      <option value="hi">हिंदी</option>
+    </select>
+  </header>
+
+  <div class="steps">
+    <div class="step done"><div class="step-circle"><i class="fa fa-check"></i></div><span id="s1">Location</span></div>
+    <div class="step-line done"></div>
+    <div class="step done"><div class="step-circle"><i class="fa fa-check"></i></div><span id="s2">Soil</span></div>
+    <div class="step-line done"></div>
+    <div class="step active"><div class="step-circle">3</div><span id="s3">Results</span></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-circle">4</div><span id="s4">Feedback</span></div>
+  </div>
+
+  <!-- CROP RESULT CARD -->
+  <div class="result-card" id="cropCard">
+    <div class="result-badge" id="modelBadge">ML Model</div>
+    <div class="primary-crop-name" id="cropName">—</div>
+    <div class="crop-sub" id="cropSeason">—</div>
+    <div class="intercrop-grid">
+      <div class="intercrop-card">
+        <div class="intercrop-label">Intercrop 1</div>
+        <div class="intercrop-name" id="ic1">—</div>
+      </div>
+      <div class="intercrop-divider">+</div>
+      <div class="intercrop-card">
+        <div class="intercrop-label">Intercrop 2</div>
+        <div class="intercrop-name" id="ic2">—</div>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-item"><div class="detail-lbl">Fertiliser</div><div class="detail-val" id="fert">—</div></div>
+      <div class="detail-item"><div class="detail-lbl">Profit/Acre</div><div class="detail-val" id="profit">—</div></div>
+      <div class="detail-item"><div class="detail-lbl">Yield Est.</div><div class="detail-val" id="yieldVal">—</div></div>
+      <div class="detail-item"><div class="detail-lbl">Market</div><div class="detail-val" id="mktStatus">—</div></div>
+    </div>
+  </div>
+
+  <!-- SOIL HEALTH -->
+  <div class="card soil-card">
+    <div class="card-header"><span class="card-icon">🧪</span><h2>Soil Health Score</h2></div>
+    <div class="gauge-wrap">
+      <canvas id="gauge" width="220" height="120"></canvas>
+      <div class="gauge-score" id="gaugeScore">—</div>
+      <div class="gauge-label" id="gaugeLabel">Score</div>
+    </div>
+    <div id="soilTips" class="soil-tips"></div>
+  </div>
+
+  <!-- CROP CALENDAR -->
+  <div class="card">
+    <div class="card-header"><span class="card-icon">📅</span><h2>Crop Calendar</h2></div>
+    <div class="calendar-track" id="calendar"></div>
+  </div>
+
+  <!-- IRRIGATION -->
+  <div class="card irr-card">
+    <div class="card-header"><span class="card-icon">💧</span><h2>Irrigation Schedule</h2></div>
+    <div class="irr-grid" id="irrigationGrid"></div>
+  </div>
+
+  <!-- DISEASE RISK -->
+  <div class="card disease-card">
+    <div class="card-header"><span class="card-icon">⚠️</span><h2>Disease Risk</h2></div>
+    <div id="diseaseList"></div>
+  </div>
+
+  <!-- TOP 3 -->
+  <div class="card">
+    <div class="card-header"><span class="card-icon">🏆</span><h2>Top 3 Crop Alternatives</h2></div>
+    <div class="top3-grid" id="top3Grid"></div>
+  </div>
+
+  <!-- MARKET PRICE -->
+  <div class="card market-card">
+    <div class="card-header"><span class="card-icon">📈</span><h2>Market Price Forecast</h2></div>
+    <div id="trendBar" class="trend-bar"></div>
+    <div class="chart-container"><canvas id="priceChart"></canvas></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="card map-card">
+    <div class="card-header"><span class="card-icon">🗺️</span><h2>Nearby Mandis Map</h2></div>
+    <div id="leafletMap" class="leaflet-map"></div>
+    <div id="mandiList" class="mandi-list"></div>
+  </div>
+
+  <!-- GOVT SCHEMES -->
+  <div class="card schemes-card">
+    <div class="card-header"><span class="card-icon">🏛️</span><h2>Government Schemes</h2></div>
+    <div id="schemesList"></div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="action-row">
+    <button class="btn btn-report" onclick="downloadReport()">
+      <i class="fa fa-file-pdf"></i> Report
+    </button>
+    <button class="btn btn-share" onclick="shareWhatsApp()">
+      <i class="fa-brands fa-whatsapp"></i> Share
+    </button>
+    <button class="btn btn-outline" onclick="window.location.href='/history'">
+      <i class="fa fa-clock-rotate-left"></i> History
+    </button>
+    <button class="btn btn-primary btn-next" onclick="goFeedback()">
+      <i class="fa fa-star"></i> <span id="nextTxt">Feedback</span>
+    </button>
+  </div>
+
+  <div style="height:2rem"></div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+Auth.guard();
+Auth.renderHeader();
+const T = {{ translations|tojson }};
+let lang = localStorage.getItem("cropLang") || "en";
+let R = null;
+let chartInst = null;
+let leafMap = null;
+
+function tr(key) { return (T[lang] && T[lang][key]) || T.en[key] || key; }
+function trCrop(c) { return (T[lang]&&T[lang].crops&&T[lang].crops[c]) || (T.en.crops&&T.en.crops[c]) || c; }
+
+function changeLang() {
+  lang = document.getElementById("language").value;
+  localStorage.setItem("cropLang", lang);
+  document.getElementById("s1").innerText = tr("step1");
+  document.getElementById("s2").innerText = tr("step2");
+  document.getElementById("s3").innerText = tr("step3");
+  document.getElementById("s4").innerText = tr("step4");
+  document.getElementById("nextTxt").innerText = tr("next");
+  if (R) renderAll(R);
+}
+
+window.onload = function() {
+  document.getElementById("language").value = lang;
+  R = JSON.parse(localStorage.getItem("cropResult") || "null");
+  if (!R) { window.location.href = "/"; return; }
+  renderAll(R);
+};
+
+function renderAll(r) {
+  renderCrop(r);
+  renderGauge(r.soil_score, r.soil_tips);
+  renderCalendar(r.calendar);
+  renderIrrigation(r.irrigation);
+  renderDiseases(r.disease_risks);
+  renderTop3(r.top3);
+  renderMarket(r);
+  renderMap(r.nearby_mandis, r.farm_lat, r.farm_lon);
+  renderSchemes(r.gov_schemes);
+}
+
+function renderCrop(r) {
+  document.getElementById("cropName").innerText   = trCrop(r.crop);
+  document.getElementById("cropSeason").innerText = r.season;
+  document.getElementById("modelBadge").innerText = r.model_used === "ML" ? "🤖 ML Model" : "📋 Rule-Based";
+  document.getElementById("ic1").innerText    = trCrop(r.intercrop_1);
+  document.getElementById("ic2").innerText    = trCrop(r.intercrop_2);
+  document.getElementById("fert").innerText   = r.fertilizer;
+  document.getElementById("profit").innerText = r.profit_per_acre;
+  document.getElementById("yieldVal").innerText = r.yield_est + " kg/acre";
+  document.getElementById("mktStatus").innerText = r.market_status;
+}
+
+function renderGauge(score, tips) {
+  const canvas = document.getElementById("gauge");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, 220, 120);
+  const cx=110, cy=110, r=90, start=Math.PI, end=2*Math.PI;
+  // Background arc
+  ctx.beginPath(); ctx.arc(cx,cy,r,start,end);
+  ctx.strokeStyle="#333"; ctx.lineWidth=18; ctx.stroke();
+  // Score arc
+  const pct = Math.min(score,100)/100;
+  const color = pct<0.4?"#e76f51":pct<0.7?"#e9c46a":"#52b788";
+  ctx.beginPath(); ctx.arc(cx,cy,r,start, start + pct*Math.PI);
+  ctx.strokeStyle=color; ctx.lineWidth=18; ctx.lineCap="round"; ctx.stroke();
+  document.getElementById("gaugeScore").innerText = score + "/100";
+  document.getElementById("gaugeLabel").style.color = color;
+  const tipsEl = document.getElementById("soilTips");
+  tipsEl.innerHTML = (tips||[]).map(t=>`<div class="soil-tip">💡 ${t}</div>`).join("") ||
+                     `<div class="soil-tip" style="color:#52b788">✅ Soil health is good!</div>`;
+}
+
+function renderCalendar(cal) {
+  if (!cal) return;
+  const el = document.getElementById("calendar");
+  el.innerHTML = `
+    <div class="cal-track-inner">
+      <div class="cal-step"><div class="cal-dot sow"></div><div class="cal-month">${cal.sow}</div><div class="cal-label">Sow</div></div>
+      <div class="cal-line"></div>
+      <div class="cal-step"><div class="cal-dot grow"></div><div class="cal-month">${cal.grow}</div><div class="cal-label">Growing</div></div>
+      <div class="cal-line"></div>
+      <div class="cal-step"><div class="cal-dot harv"></div><div class="cal-month">${cal.harvest}</div><div class="cal-label">Harvest</div></div>
+    </div>
+    <div class="cal-duration">${cal.duration_months} months</div>`;
+}
+
+function renderIrrigation(irr) {
+  if (!irr) return;
+  document.getElementById("irrigationGrid").innerHTML = `
+    <div class="irr-item"><div class="irr-val">${irr.frequency}</div><div class="irr-lbl">Frequency</div></div>
+    <div class="irr-item"><div class="irr-val">${irr.amount_per_session}</div><div class="irr-lbl">Amount/Session</div></div>`;
+}
+
+function renderDiseases(risks) {
+  document.getElementById("diseaseList").innerHTML = (risks||[]).map(d => `
+    <div class="disease-item risk-${d.level.toLowerCase()}">
+      <div class="disease-header">
+        <span class="disease-type">${d.type}</span>
+        <span class="risk-badge">${d.level}</span>
+      </div>
+      <div class="disease-advice">${d.advice}</div>
+    </div>`).join("");
+}
+
+function renderTop3(top3) {
+  document.getElementById("top3Grid").innerHTML = (top3||[]).map((c,i) => `
+    <div class="top3-card ${i===0?'top3-best':''}">
+      ${i===0?'<div class="top3-badge">⭐ Best</div>':''}
+      <div class="top3-name">${trCrop(c.crop)}</div>
+      <div class="top3-row"><span>📅</span><span>${c.season}</span></div>
+      <div class="top3-row"><span>💰</span><span>${c.profit}</span></div>
+      <div class="top3-row"><span>💧</span><span>${c.water}</span></div>
+    </div>`).join("");
+}
+
+function renderMarket(r) {
+  const trend = r.market_trend;
+  const icon  = trend==="rising"?"↑ Rising":trend==="falling"?"↓ Falling":"→ Stable";
+  const cls   = "trend-"+trend;
+  document.getElementById("trendBar").innerHTML =
+    `<span class="${cls}">${icon}</span> Current: ₹${r.current_price}/q &nbsp; Next Month: ₹${r.next_month_price}/q`;
+  const months = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById("priceChart"), {
+    type:"line",
+    data:{
+      labels:months,
+      datasets:[
+        {label:"Price ₹/q", data:r.price_history, borderColor:"#52b788",
+         backgroundColor:"rgba(82,183,136,0.1)", tension:0.4, fill:true, pointRadius:3},
+        {label:"Forecast", data:[...Array(11).fill(null), r.current_price, r.next_month_price],
+         borderColor:"#e9c46a", borderDash:[6,3], tension:0.4, pointRadius:3},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:"rgba(255,255,255,0.7)"}},
+               tooltip:{backgroundColor:"#1a3d2b",titleColor:"#95d5b2",bodyColor:"#fff"}},
+      scales:{
+        x:{grid:{color:"rgba(255,255,255,0.07)"},ticks:{color:"rgba(255,255,255,0.6)"}},
+        y:{grid:{color:"rgba(255,255,255,0.07)"},ticks:{color:"rgba(255,255,255,0.6)",
+           callback:v=>"₹"+v.toLocaleString("en-IN")}},
+      }
+    }
+  });
+}
+
+function renderMap(mandis, farmLat, farmLon) {
+  if (!farmLat || !farmLon) return;
+  const useLat = parseFloat(localStorage.getItem("cropLat")) || farmLat;
+  const useLon = parseFloat(localStorage.getItem("cropLon")) || farmLon;
+  // Update distances
+  const updated = (mandis||[]).map(m => {
+    if (m.lat && m.lng) {
+      const R=6371, dLat=(m.lat-useLat)*Math.PI/180, dLon=(m.lng-useLon)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2+Math.cos(useLat*Math.PI/180)*Math.cos(m.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+      m.distance_km = +(R*2*Math.asin(Math.sqrt(a))).toFixed(1);
+    }
+    return m;
+  }).sort((a,b)=>a.distance_km-b.distance_km);
+
+  document.getElementById("mandiList").innerHTML = updated.map(m => `
+    <div class="mandi-item">
+      <div class="mandi-icon">🏪</div>
+      <div class="mandi-info">
+        <div class="mandi-name">${m.name}</div>
+        <div class="mandi-dist">📍 ${m.distance_km} km away</div>
+      </div>
+      <a class="mandi-map" href="https://www.google.com/maps/dir/${useLat},${useLon}/${m.lat},${m.lng}" target="_blank">
+        <i class="fa fa-diamond-turn-right"></i></a>
+    </div>`).join("");
+
+  setTimeout(() => {
+    if (leafMap) { leafMap.remove(); leafMap=null; }
+    leafMap = L.map("leafletMap",{scrollWheelZoom:true}).setView([useLat,useLon],12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(leafMap);
+    const fi = L.divIcon({className:"",html:`<div style="background:#1a3d2b;color:#fff;padding:5px 9px;border-radius:16px;font-size:11px;font-weight:700;border:2px solid #52b788;">🌾 Your Farm<br><small style="opacity:.7">Drag me</small></div>`,iconAnchor:[45,20]});
+    const fm = L.marker([useLat,useLon],{icon:fi,draggable:true}).addTo(leafMap);
+    fm.bindPopup(`<b>🌾 Your Farm</b><br>${useLat.toFixed(5)}, ${useLon.toFixed(5)}`).openPopup();
+    fm.on("dragend", e => {
+      const {lat,lng} = e.target.getLatLng();
+      localStorage.setItem("cropLat", lat);
+      localStorage.setItem("cropLon", lng);
+      showToast("📍 Farm location updated!");
+    });
+    updated.forEach(m => {
+      L.polyline([[useLat,useLon],[m.lat,m.lng]],{color:"#e9c46a",weight:1.5,dashArray:"6 4",opacity:.6}).addTo(leafMap);
+      const mi = L.divIcon({className:"",html:`<div style="background:#e9c46a;color:#1a3d2b;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid #c9a227;">🏪</div>`,iconAnchor:[16,16]});
+      L.marker([m.lat,m.lng],{icon:mi}).addTo(leafMap)
+       .bindPopup(`<b>${m.name}</b><br>${m.distance_km} km away<br><a href="https://www.google.com/maps/dir/${useLat},${useLon}/${m.lat},${m.lng}" target="_blank" style="color:#2d6a4f;font-weight:600">🧭 Directions</a>`);
+    });
+    const bounds = [[useLat,useLon],...updated.filter(m=>m.lat&&m.lng).map(m=>[m.lat,m.lng])];
+    if (bounds.length > 1) leafMap.fitBounds(bounds,{padding:[30,30]});
+  }, 200);
+}
+
+const SCHEME_URLS = {
+  "PM-Kisan":"https://pmkisan.gov.in","PMFBY":"https://pmfby.gov.in","NFSM":"https://nfsm.gov.in",
+  "MSP Scheme":"https://dfpd.gov.in","Cotton Technology Mission":"https://agricoop.nic.in",
+  "Sugarcane Dev Scheme":"https://agricoop.nic.in","FRP Policy":"https://dfpd.gov.in",
+  "NHM":"https://nhm.nic.in","Pulses Dev Scheme":"https://nfsm.gov.in",
+  "Spices Board India":"https://indianspices.com","Coconut Dev Board":"https://coconutboard.gov.in",
+};
+function renderSchemes(schemes) {
+  document.getElementById("schemesList").innerHTML = (schemes||[]).map(s => `
+    <a class="scheme-item" href="${SCHEME_URLS[s]||'#'}" target="_blank">
+      <i class="fa fa-indian-rupee-sign"></i> ${s}
+      <i class="fa fa-external-link" style="margin-left:auto;font-size:10px"></i>
+    </a>`).join("");
+}
+
+function downloadReport() {
+  if (!R) return;
+  const blob = new Blob([JSON.stringify(R, null, 2)], {type:"application/json"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = `crop_advisory_${R.crop}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function shareWhatsApp() {
+  if (!R) return;
+  const msg = `🌾 *AI Crop Advisory*\n\n✅ Crop: ${trCrop(R.crop)}\n🌿 Intercrop: ${trCrop(R.intercrop_1)} + ${trCrop(R.intercrop_2)}\n💰 Profit: ${R.profit_per_acre}\n📦 Yield: ${R.yield_est} kg/acre\n🧪 Fertiliser: ${R.fertilizer}\n💧 Irrigation: ${R.irrigation.frequency}\n🌍 Soil Score: ${R.soil_score}/100\n\n_AI Crop Advisor — INNOVSENSE 2026_`;
+  window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");
+}
+
+function goFeedback() {
+  if (R) {
+    localStorage.setItem("feedbackPredId", R._id||"");
+    localStorage.setItem("feedbackCrop", R.crop||"");
+  }
+  window.location.href="/feedback";
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.innerText = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+</script>
+</body>
+</html>

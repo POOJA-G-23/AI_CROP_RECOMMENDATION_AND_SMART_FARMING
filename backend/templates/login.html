@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Crop Advisor — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body class="auth-body">
+<div class="bg-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div></div>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">🌾</div>
+    <h1 class="auth-title">AI Crop Advisor</h1>
+    <p class="auth-sub">Login to your farming account</p>
+
+    <form onsubmit="doLogin(event)" class="auth-form">
+      <div class="input-group">
+        <label><i class="fa fa-envelope"></i> Email Address</label>
+        <input type="email" id="email" placeholder="farmer@example.com" required autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label><i class="fa fa-lock"></i> Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('password')"><i class="fa fa-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
+        <i class="fa fa-right-to-bracket"></i> Login
+      </button>
+    </form>
+
+    <div class="auth-divider">or</div>
+
+    <div class="auth-links">
+      <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+      <p style="margin-top:0.5rem"><a href="/admin" class="admin-link"><i class="fa fa-shield-halved"></i> Admin Login</a></p>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="/static/js/auth.js"></script>
+<script>
+// Redirect if already logged in
+if (Auth.isLoggedIn()) window.location.href = Auth.isAdmin() ? "/admin" : "/app";
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById("loginBtn");
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Logging in...';
+  btn.disabled = true;
+  try {
+    const resp = await fetch("/api/auth/login", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ email:document.getElementById("email").value.trim(), password:document.getElementById("password").value })
+    });
+    const d = await resp.json();
+    if (!resp.ok) { showToast(d.error||"Login failed","error"); return; }
+    Auth.save(d.token, d.user);
+    showToast("Welcome back, "+d.user.name+"!","success");
+    setTimeout(()=>{ window.location.href = d.user.role==="admin"?"/admin":"/app"; }, 500);
+  } catch(e) { showToast("Connection error","error"); }
+  finally { btn.innerHTML='<i class="fa fa-right-to-bracket"></i> Login'; btn.disabled=false; }
+}
+
+function togglePw(id) {
+  const el=document.getElementById(id);
+  el.type = el.type==="password"?"text":"password";
+}
+</script>
+</body>
+</html>
